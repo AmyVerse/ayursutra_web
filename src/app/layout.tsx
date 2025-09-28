@@ -1,3 +1,4 @@
+import Providers from "@/components/Providers";
 import type { Metadata } from "next";
 import { Inter, Montserrat } from "next/font/google";
 import "./globals.css";
@@ -30,7 +31,7 @@ export default function RootLayout({
       <body
         className={`${inter.variable} ${montserrat.variable} antialiased bg-white text-gray-900`}
       >
-        {children}
+        <Providers>{children}</Providers>
       </body>
     </html>
   );

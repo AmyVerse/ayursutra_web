@@ -1,36 +1,93 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# AyurSutra Web Application
 
-## Getting Started
+A modern web application for Ayurvedic healthcare management with OTP-based authentication and separate dashboards for patients and doctors.
 
-First, run the development server:
+## Features
+
+- 🔐 **OTP Authentication** - Secure login using Resend API
+- 👨‍⚕️ **Doctor Dashboard** - Complete management interface for healthcare providers
+- 🤒 **Patient Dashboard** - Simple interface for patients (placeholder)
+- 🏥 **HPR/ABHA Integration** - Doctor verification using health registries
+- 📱 **Responsive Design** - Works on all devices
+
+## Tech Stack
+
+- **Frontend**: Next.js 15, React 19, TailwindCSS
+- **Backend**: Next.js API Routes
+- **Authentication**: NextAuth.js with custom OTP provider
+- **Database**: Neon PostgreSQL with Drizzle ORM
+- **Email**: Resend API for OTP delivery
+
+## Quick Start
 
 ```bash
+# Install dependencies
+npm install
+
+# Start development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Visit `http://localhost:3000`
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment Setup
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Update `.env.local` with your API keys:
 
-## Learn More
+```env
+# Database (Already configured)
+DATABASE_URL="your_neon_database_url"
 
-To learn more about Next.js, take a look at the following resources:
+# Auth.js
+NEXTAUTH_URL="http://localhost:3000"
+NEXTAUTH_SECRET="generate_a_random_secret_key_here"
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# Resend API
+RESEND_API_KEY="your_resend_api_key_here"
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# JWT Secret for OTP
+JWT_SECRET="generate_another_random_secret_here"
+```
 
-## Deploy on Vercel
+## Authentication Flow
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### For Patients:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Enter mobile/email → Get OTP → Verify → `/dashboard/patient`
+
+### For Doctors:
+
+1. Click "Sign up as Doctor" → Enter HPR/ABHA ID → Get OTP → Verify → `/dashboard/doctor`
+
+## Dashboard Status
+
+- ✅ **Doctor Dashboard**: Full implementation with appointments, patients, schedule
+- 🔄 **Patient Dashboard**: Placeholder ready for implementation
+
+## Database Commands
+
+```bash
+npm run db:generate  # Generate migrations
+npm run db:migrate   # Run migrations
+npm run db:studio    # Open database studio
+```
+
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── api/auth/           # NextAuth & OTP endpoints
+│   ├── dashboard/
+│   │   ├── doctor/         # Complete doctor interface
+│   │   └── patient/        # Patient placeholder
+│   └── page.tsx            # Landing page with auth
+├── lib/
+│   ├── db/                 # Database schema & connection
+│   ├── auth.ts             # NextAuth config
+│   └── otp.ts              # OTP utilities
+└── components/
+    └── Providers.tsx       # Session provider
+```
+
+Ready for development! 🚀
