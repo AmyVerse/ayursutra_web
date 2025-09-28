@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+  --teal-accent: rgb(16, 151, 135);
+  color-scheme: light only;
+}
+
+html {
+  color-scheme: light only;
+}
+
+body {
+  background: #ffffff !important;
+  color: #171717 !important;
+  font-family: var(--font-inter), sans-serif;
+}
+
+/* Force all elements to use white background in strict mode */
+* {
+  color-scheme: light only;
+}
+
+/* Override any potential dark styles */
+@media (prefers-color-scheme: dark) {
+  * {
+    color-scheme: light only !important;
+  }
+
+  body {
+    background: #ffffff !important;
+    color: #171717 !important;
+  }
+}
+
+.grid-pattern {
+  background-color: #ffffff;
+  background-image: linear-gradient(
+      rgba(16, 151, 135, 0.1) 1px,
+      transparent 1px
+    ),
+    linear-gradient(90deg, rgba(16, 151, 135, 0.1) 1px, transparent 1px);
+  background-size: 50px 50px;
+}
+
+.blur-overlay {
+  backdrop-filter: blur(100px);
+  -webkit-backdrop-filter: blur(100px);
+}
