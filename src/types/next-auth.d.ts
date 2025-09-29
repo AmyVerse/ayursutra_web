@@ -9,6 +9,7 @@ declare module "next-auth" {
       name?: string | null;
       image?: string | null;
       role: "patient" | "doctor";
+      ayursutraId?: string | null;
       doctorInfo?: {
         id: number;
         hprId?: string | null;
@@ -27,6 +28,7 @@ declare module "next-auth" {
     email?: string | null;
     phone?: string | null;
     role: "patient" | "doctor";
+    ayursutraId?: string | null;
   }
 }
 
@@ -35,6 +37,7 @@ declare module "next-auth/jwt" {
     id: string;
     role: "patient" | "doctor";
     phone?: string | null;
+    ayursutraId?: string | null;
     doctorInfo?: any;
   }
 }

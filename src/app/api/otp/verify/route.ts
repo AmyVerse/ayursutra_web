@@ -79,14 +79,24 @@ export async function POST(request: NextRequest) {
 
       const userId = doctorUser[0].id;
 
-      // Create doctor record
+      // Generate AyurSutra ID for the doctor
+      const { generateAyurSutraId, assignAyurSutraId } = await import(
+        "@/lib/ayursutra-id"
+      );
+      const doctorAyursutraId = await generateAyurSutraId("doctor");
+
+      // Assign AyurSutra ID to user
+      await assignAyurSutraId(userId, "doctor");
+
+      // Create doctor record with AyurSutra ID
       await db.insert(doctors).values({
-        userId,
+        ayursutraId: doctorAyursutraId,
+        name: "Doctor", // Default name, can be updated later
+        specialization: "General Practitioner",
+        experience: "5", // Keep as text to match schema
+        location: "India",
         hprId: hprId || null,
         abhaId: abhaId || null,
-        specialization: "General Practitioner",
-        experience: "5 years",
-        location: "India",
       });
 
       return NextResponse.json({

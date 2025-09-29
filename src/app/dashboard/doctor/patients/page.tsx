@@ -1,3 +1,6 @@
+"use client";
+
+import NotificationIcon from "@/components/NotificationIcon";
 import Link from "next/link";
 
 export default function Patients() {
@@ -60,81 +63,47 @@ export default function Patients() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <header className="bg-white shadow-sm border-b">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center">
+    <>
+      {/* Top Header */}
+      <header className="bg-white shadow-sm border-b border-gray-200">
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">Patients</h1>
+              <p className="text-sm text-gray-600 mt-1">
+                Manage your patient records and treatments
+              </p>
+            </div>
+
+            <div className="flex items-center space-x-4">
+              <NotificationIcon />
+
               <Link
-                href="/dashboard"
-                className="text-2xl font-montserrat font-bold"
-                style={{ color: "rgb(16, 151, 135)" }}
+                href="/dashboard/doctor/patients/new"
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-teal-600 hover:bg-teal-700 transition-colors"
               >
-                AyurSutra Dashboard
+                <svg
+                  className="w-4 h-4 mr-2"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M12 6v6m0 0v6m0-6h6m-6 0H6"
+                  />
+                </svg>
+                Add Patient
               </Link>
             </div>
-            <nav className="flex space-x-8">
-              <Link
-                href="/dashboard"
-                className="text-gray-600 hover:text-gray-800 font-inter"
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/dashboard/appointments"
-                className="text-gray-600 hover:text-gray-800 font-inter"
-              >
-                Appointments
-              </Link>
-              <Link
-                href="/dashboard/patients"
-                className="text-teal-600 hover:text-teal-800 font-inter"
-              >
-                Patients
-              </Link>
-              <Link
-                href="/dashboard/calendar"
-                className="text-gray-600 hover:text-gray-800 font-inter"
-              >
-                Calendar
-              </Link>
-              <Link
-                href="/dashboard/reports"
-                className="text-gray-600 hover:text-gray-800 font-inter"
-              >
-                Reports
-              </Link>
-              <Link
-                href="/dashboard/account"
-                className="text-gray-600 hover:text-gray-800 font-inter"
-              >
-                Account
-              </Link>
-            </nav>
           </div>
         </div>
       </header>
 
-      <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
-        {/* Page Header */}
-        <div className="flex justify-between items-center mb-8">
-          <div>
-            <h2 className="text-3xl font-montserrat font-bold text-gray-900 mb-2">
-              Patient Management
-            </h2>
-            <p className="text-gray-600 font-inter">
-              Manage your patients and their treatment plans
-            </p>
-          </div>
-          <Link
-            href="/dashboard/patients/new"
-            className="px-6 py-3 bg-teal-600 text-white font-inter font-semibold rounded-lg hover:bg-teal-700 transition-colors"
-          >
-            Add New Patient
-          </Link>
-        </div>
-
+      {/* Main Content */}
+      <main className="p-6">
         {/* Search and Filter */}
         <div className="bg-white rounded-lg shadow-sm p-6 mb-6">
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
@@ -314,7 +283,7 @@ export default function Patients() {
             </button>
           </div>
         </div>
-      </div>
-    </div>
+      </main>
+    </>
   );
 }

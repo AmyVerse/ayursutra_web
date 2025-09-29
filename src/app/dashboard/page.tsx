@@ -24,7 +24,6 @@ export default function DashboardRedirect() {
       router.push("/dashboard/patient");
     } else {
       // Fallback: redirect to home if role is undefined
-      console.log("not logged in");
       router.push("/");
     }
   }, [session, status, router]);

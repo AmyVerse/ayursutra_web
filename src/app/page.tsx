@@ -21,8 +21,12 @@ export default function Home() {
 
   const handleGetStarted = () => {
     if (session) {
-      // User is logged in, go to dashboard
-      router.push("/dashboard");
+      // User is logged in, go to appropriate dashboard
+      if (session.user.role === "doctor") {
+        router.push("/dashboard/doctor");
+      } else {
+        router.push("/dashboard/patient");
+      }
     } else {
       // User not logged in, show login page
       setShowLoginPage(true);

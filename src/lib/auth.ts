@@ -62,13 +62,14 @@ export const authOptions: NextAuthOptions = {
           token.role = dbUser[0].role;
           token.id = dbUser[0].id.toString();
           token.phone = dbUser[0].phone;
+          token.ayursutraId = dbUser[0].ayursutraId; // Add AyurSutra ID to token
 
           // If doctor, fetch doctor-specific info
-          if (dbUser[0].role === "doctor") {
+          if (dbUser[0].role === "doctor" && dbUser[0].ayursutraId) {
             const doctorInfo = await db
               .select()
               .from(doctors)
-              .where(eq(doctors.userId, dbUser[0].id))
+              .where(eq(doctors.ayursutraId, dbUser[0].ayursutraId))
               .limit(1);
 
             if (doctorInfo.length > 0) {
@@ -84,6 +85,7 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string;
         session.user.role = token.role as "patient" | "doctor";
         session.user.phone = token.phone as string;
+        session.user.ayursutraId = token.ayursutraId as string; // Add AyurSutra ID to session
         session.user.doctorInfo = token.doctorInfo as any;
       }
       return session;
