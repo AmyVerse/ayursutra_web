@@ -29,6 +29,7 @@ export default function Home() {
   const [isSendingOtp, setIsSendingOtp] = useState(false);
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [isDemoLoading, setIsDemoLoading] = useState(false);
+  const [fetchedDoctor, setFetchedDoctor] = useState<any>(null);
 
   // Hardcoded doctors data
 
@@ -123,23 +124,37 @@ export default function Home() {
     if (hprId || abhaId) {
       setIsSendingOtp(true);
       try {
-        // Simulate fetching doctor details from HPR/ABHA registry
-        // In real implementation, this would call API to verify ID and get registered mobile
+        const response = await fetch(`/api/doctor/details-by-hpr?hprId=${hprId}`);
+        const data = await response.json();
 
-        // Simulate API delay
-        await new Promise((resolve) => setTimeout(resolve, 1000));
-
-        const simulatedRegisteredMobile = "+91 98765-43210"; // This would come from API
-        setMobileOrEmail(simulatedRegisteredMobile);
-
-        // Move to OTP step after fetching details
-        setLoginStep("otp");
+        if (data.success) {
+          setFetchedDoctor(data.doctor);
+          setLoginStep("doctor-hpr-details");
+        } else {
+          alert(data.error || "Doctor record not found. Please verify your ID.");
+        }
       } catch (error) {
         console.error("Error fetching doctor details:", error);
         alert("Failed to verify your credentials. Please try again.");
       } finally {
         setIsSendingOtp(false);
       }
+    }
+  };
+
+  const handleHprLogin = async () => {
+    setIsDemoLoading(true);
+    try {
+      await signIn("doctor-hpr", {
+        hprId: hprId,
+        callbackUrl: "/dashboard/doctor",
+        redirect: true,
+      });
+    } catch (error) {
+      console.error("HPR Login error:", error);
+      alert("Login failed. Please try again.");
+    } finally {
+      setIsDemoLoading(false);
     }
   };
 
@@ -297,7 +312,9 @@ export default function Home() {
                         ? "Verify OTP"
                         : loginStep === "demo-select"
                           ? "Choose Demo Account"
-                          : "Welcome to AyurSutra"}
+                          : loginStep === "doctor-hpr-details"
+                            ? "Confirm Your Details"
+                            : "Welcome to AyurSutra"}
                   </h2>
                   <p className="text-gray-600 font-inter">
                     {loginStep === "doctor-signup"
@@ -306,7 +323,9 @@ export default function Home() {
                         ? "Enter the OTP sent to your email"
                         : loginStep === "demo-select"
                           ? "Select which experience you'd like to explore"
-                          : "Sign in by OTP verification"}
+                          : loginStep === "doctor-hpr-details"
+                            ? "Please verify your information before logging in"
+                            : "Sign in by OTP verification"}
                   </p>
                 </div>
 
@@ -526,6 +545,85 @@ export default function Home() {
                         className="text-gray-500 hover:text-gray-700 text-sm transition-colors"
                       >
                         ← Back to Login
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Step 3.5: Doctor HPR Details Confirmation */}
+                {loginStep === "doctor-hpr-details" && fetchedDoctor && (
+                  <div className="space-y-6">
+                    <div className="bg-teal-50 border border-teal-200 rounded-2xl p-6 space-y-4">
+                      <div className="flex items-center space-x-4">
+                        <div className="w-12 h-12 bg-teal-600 rounded-full flex items-center justify-center text-white">
+                          <Stethoscope size={24} />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-gray-900 text-lg">
+                            {fetchedDoctor.name}
+                          </h4>
+                          <p className="text-teal-600 text-sm font-medium">
+                            {fetchedDoctor.specialization}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-4 pt-2 border-t border-teal-100">
+                        <div>
+                          <p className="text-xs text-teal-600 uppercase font-bold tracking-wider mb-1">
+                            Experience
+                          </p>
+                          <p className="text-gray-800 font-medium">
+                            {fetchedDoctor.experience} Years
+                          </p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-teal-600 uppercase font-bold tracking-wider mb-1">
+                            Location
+                          </p>
+                          <p className="text-gray-800 font-medium">
+                            {fetchedDoctor.location}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="pt-2">
+                        <p className="text-xs text-teal-600 uppercase font-bold tracking-wider mb-1">
+                          HPR ID
+                        </p>
+                        <p className="text-gray-800 font-mono font-bold">
+                          {hprId}
+                        </p>
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleHprLogin}
+                      disabled={isDemoLoading}
+                      className="w-full px-6 py-4 bg-teal-600 hover:bg-teal-700 text-white font-bold rounded-xl shadow-lg transition-all flex items-center justify-center space-x-2"
+                    >
+                      {isDemoLoading ? (
+                        <>
+                          <div className="animate-spin h-5 w-5 border-2 border-white rounded-full border-t-transparent"></div>
+                          <span>Logging in...</span>
+                        </>
+                      ) : (
+                        <>
+                          <span>Direct Login as Doctor</span>
+                          <Zap size={18} />
+                        </>
+                      )}
+                    </button>
+
+                    <div className="text-center">
+                      <button
+                        onClick={() => {
+                          setLoginStep("doctor-signup");
+                          setFetchedDoctor(null);
+                        }}
+                        className="text-gray-500 hover:text-gray-700 text-sm transition-colors"
+                      >
+                        ← Back to ID Entry
                       </button>
                     </div>
                   </div>

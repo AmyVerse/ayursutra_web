@@ -135,6 +135,52 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         };
       },
     }),
+    // === Doctor HPR Login Provider ===
+    Credentials({
+      id: "doctor-hpr",
+      name: "Doctor HPR Login",
+      credentials: {
+        hprId: { label: "HPR ID", type: "text" },
+      },
+      async authorize(credentials) {
+        if (!credentials?.hprId || typeof credentials.hprId !== "string") {
+          return null;
+        }
+
+        try {
+          // 1. Find doctor profile by HPR ID
+          const doctorProfile = await db
+            .select()
+            .from(doctors)
+            .where(eq(doctors.hprId, credentials.hprId))
+            .limit(1);
+
+          if (doctorProfile.length === 0) return null;
+
+          // 2. Find associated user
+          const dbUser = await db
+            .select()
+            .from(users)
+            .where(eq(users.ayursutraId, doctorProfile[0].ayursutraId))
+            .limit(1);
+
+          if (dbUser.length === 0) return null;
+
+          const user = dbUser[0];
+
+          return {
+            id: user.id.toString(),
+            email: user.email,
+            name: user.name,
+            role: user.role as "patient" | "doctor",
+            ayursutraId: user.ayursutraId,
+          };
+        } catch (error) {
+          console.error("HPR Auth error:", error);
+          return null;
+        }
+      },
+    }),
   ],
   callbacks: {
     async jwt({ token, user }) {

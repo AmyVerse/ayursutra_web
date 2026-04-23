@@ -63,48 +63,106 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // User doesn't exist - create new user
-    if (isDoctor && (hprId || abhaId)) {
-      // Doctor signup with HPR/ABHA ID
-      const doctorUser = await db
-        .insert(users)
-        .values({
-          email: isEmail ? identifier : null,
-          phone: isEmail ? null : identifier,
-          role: "doctor",
-          emailVerified: isEmail ? new Date() : null,
-          phoneVerified: isEmail ? null : new Date(),
-        })
-        .returning({ id: users.id });
+    // User doesn't exist - create new user OR link to existing doctor by HPR ID
+    if (isDoctor && hprId) {
+      // Check if HPR ID already exists in our doctors pool
+      const existingDoctorProfile = await db
+        .select()
+        .from(doctors)
+        .where(eq(doctors.hprId, hprId))
+        .limit(1);
 
-      const userId = doctorUser[0].id;
+      // Determine the user and AyurSutra ID
+      let userId: number;
+      let doctorAyursutraId: string;
+      let doctorName = "Doctor";
 
-      // Generate AyurSutra ID for the doctor
-      const { generateAyurSutraId, assignAyurSutraId } = await import(
-        "@/lib/ayursutra-id"
-      );
-      const doctorAyursutraId = await generateAyurSutraId("doctor");
+      if (existingDoctorProfile.length > 0) {
+        const doctorProfile = existingDoctorProfile[0];
+        doctorAyursutraId = doctorProfile.ayursutraId;
+        doctorName = doctorProfile.name;
 
-      // Assign AyurSutra ID to user
-      await assignAyurSutraId(userId, "doctor");
+        // Check if there's already a user for this doctor identity
+        const existingUserForDoctor = await db
+          .select()
+          .from(users)
+          .where(eq(users.ayursutraId, doctorAyursutraId))
+          .limit(1);
 
-      // Create doctor record with AyurSutra ID
-      await db.insert(doctors).values({
-        ayursutraId: doctorAyursutraId,
-        name: "Doctor", // Default name, can be updated later
-        specialization: "General Practitioner",
-        experience: "5", // Keep as text to match schema
-        location: "India",
-        hprId: hprId || null,
-        abhaId: abhaId || null,
-      });
+        if (existingUserForDoctor.length > 0) {
+          // Case 1: Doctor user already exists - Update and Log in
+          userId = existingUserForDoctor[0].id;
+          await db
+            .update(users)
+            .set({
+              email: isEmail ? identifier : existingUserForDoctor[0].email,
+              phone: isEmail ? existingUserForDoctor[0].phone : identifier,
+              emailVerified: isEmail ? new Date() : existingUserForDoctor[0].emailVerified,
+              phoneVerified: isEmail ? existingUserForDoctor[0].phoneVerified : new Date(),
+            })
+            .where(eq(users.id, userId));
+
+          return NextResponse.json({
+            success: true,
+            userId,
+            role: "doctor",
+            redirectUrl: "/dashboard/doctor",
+            message: `Welcome back, ${doctorName}!`,
+          });
+        } else {
+          // Case 2: Profile exists but no User account yet - Create user and link to profile
+          const newUser = await db
+            .insert(users)
+            .values({
+              email: isEmail ? identifier : null,
+              phone: isEmail ? null : identifier,
+              role: "doctor",
+              ayursutraId: doctorAyursutraId, // Directly use the profile's ID
+              emailVerified: isEmail ? new Date() : null,
+              phoneVerified: isEmail ? null : new Date(),
+            })
+            .returning({ id: users.id });
+          
+          userId = newUser[0].id;
+        }
+      } else {
+        // Case 3: No profile exists yet - Create new user and new profile
+        const newUser = await db
+          .insert(users)
+          .values({
+            email: isEmail ? identifier : null,
+            phone: isEmail ? null : identifier,
+            role: "doctor",
+            emailVerified: isEmail ? new Date() : null,
+            phoneVerified: isEmail ? null : new Date(),
+          })
+          .returning({ id: users.id });
+
+        userId = newUser[0].id;
+
+        const { generateAyurSutraId, assignAyurSutraId } = await import(
+          "@/lib/ayursutra-id"
+        );
+        doctorAyursutraId = await generateAyurSutraId("doctor");
+        await assignAyurSutraId(userId, "doctor");
+
+        await db.insert(doctors).values({
+          ayursutraId: doctorAyursutraId,
+          name: "Doctor", 
+          specialization: "General Practitioner",
+          experience: "5",
+          location: "India",
+          hprId: hprId,
+          abhaId: abhaId || null,
+        });
+      }
 
       return NextResponse.json({
         success: true,
         userId,
         role: "doctor",
         redirectUrl: "/dashboard/doctor",
-        message: "Doctor account created successfully!",
+        message: "Doctor account setup successfully!",
       });
     }
 
