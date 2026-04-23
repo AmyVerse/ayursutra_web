@@ -1,8 +1,7 @@
-import { authOptions } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { doctors, users } from "@/lib/db/schema";
 import { and, desc, eq, ilike } from "drizzle-orm";
-import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 
 // GET /api/doctors - Get all doctors or search by specialization/location
@@ -69,7 +68,7 @@ export async function GET(request: NextRequest) {
 // POST /api/doctors - Create or update doctor profile
 export async function POST(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
     if (!session?.user?.id) {
       return NextResponse.json(
         { success: false, error: "Unauthorized" },

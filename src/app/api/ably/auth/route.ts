@@ -1,12 +1,11 @@
-import { authOptions } from "@/lib/auth";
+import { auth } from "@/lib/auth";
 import * as Ably from "ably";
-import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 
 // Handle both GET and POST for Ably auth
 async function handleAblyAuth(request: NextRequest) {
   try {
-    const session = await getServerSession(authOptions);
+    const session = await auth();
 
     if (!session?.user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
