@@ -1,4 +1,14 @@
 "use client";
+import {
+  Brain,
+  Leaf,
+  Lightbulb,
+  RefreshCw,
+  Shield,
+  Stethoscope,
+  User,
+  Zap,
+} from "lucide-react";
 import { signIn, useSession } from "next-auth/react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -12,10 +22,13 @@ export default function Home() {
   const [mobileOrEmail, setMobileOrEmail] = useState("");
   const [otp, setOtp] = useState("");
   const [showDownloadModal, setShowDownloadModal] = useState(false);
-  const [loginStep, setLoginStep] = useState("input"); // "input", "otp", "doctor-signup"
+  const [loginStep, setLoginStep] = useState("input"); // "input", "otp", "doctor-signup", "demo-select"
   const [isDoctorSignup, setIsDoctorSignup] = useState(false);
   const [hprId, setHprId] = useState("");
   const [abhaId, setAbhaId] = useState("");
+  const [isSendingOtp, setIsSendingOtp] = useState(false);
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [isDemoLoading, setIsDemoLoading] = useState(false);
 
   // Hardcoded doctors data
 
@@ -35,6 +48,7 @@ export default function Home() {
 
   const handleSendOtp = async () => {
     if (mobileOrEmail) {
+      setIsSendingOtp(true);
       try {
         const response = await fetch("/api/otp/send", {
           method: "POST",
@@ -54,12 +68,15 @@ export default function Home() {
       } catch (error) {
         console.error("Error sending OTP:", error);
         alert("Failed to send OTP. Please try again.");
+      } finally {
+        setIsSendingOtp(false);
       }
     }
   };
 
   const handleVerifyOtp = async () => {
     if (otp) {
+      setIsVerifyingOtp(true);
       try {
         const response = await fetch("/api/otp/verify", {
           method: "POST",
@@ -96,19 +113,33 @@ export default function Home() {
       } catch (error) {
         console.error("Error verifying OTP:", error);
         alert("Failed to verify OTP. Please try again.");
+      } finally {
+        setIsVerifyingOtp(false);
       }
     }
   };
 
-  const handleDoctorSignup = () => {
+  const handleDoctorSignup = async () => {
     if (hprId || abhaId) {
-      // Simulate fetching doctor details from HPR/ABHA registry
-      // In real implementation, this would call API to verify ID and get registered mobile
-      const simulatedRegisteredMobile = "+91 98765-43210"; // This would come from API
-      setMobileOrEmail(simulatedRegisteredMobile);
+      setIsSendingOtp(true);
+      try {
+        // Simulate fetching doctor details from HPR/ABHA registry
+        // In real implementation, this would call API to verify ID and get registered mobile
 
-      // Move to OTP step after fetching details
-      setLoginStep("otp");
+        // Simulate API delay
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+
+        const simulatedRegisteredMobile = "+91 98765-43210"; // This would come from API
+        setMobileOrEmail(simulatedRegisteredMobile);
+
+        // Move to OTP step after fetching details
+        setLoginStep("otp");
+      } catch (error) {
+        console.error("Error fetching doctor details:", error);
+        alert("Failed to verify your credentials. Please try again.");
+      } finally {
+        setIsSendingOtp(false);
+      }
     }
   };
 
@@ -119,7 +150,7 @@ export default function Home() {
   const handleDownloadConfirm = () => {
     // Proceed with the download
     window.open(
-      "https://github.com/AmyVerse/ayursutra_app/releases/download/APK/ayursutrav8.apk",
+      "https://github.com/AmyVerse/ayursutra_app/releases/download/new/app-release.apk",
       "_self"
     );
     setShowDownloadModal(false);
@@ -264,58 +295,105 @@ export default function Home() {
                       ? "Doctor Registration"
                       : loginStep === "otp"
                         ? "Verify OTP"
-                        : "Welcome to AyurSutra"}
+                        : loginStep === "demo-select"
+                          ? "Choose Demo Account"
+                          : "Welcome to AyurSutra"}
                   </h2>
                   <p className="text-gray-600 font-inter">
                     {loginStep === "doctor-signup"
                       ? "Complete your doctor profile"
                       : loginStep === "otp"
-                        ? "Enter the OTP sent to your mobile/email"
-                        : "Enter your mobile number or email to continue"}
+                        ? "Enter the OTP sent to your email"
+                        : loginStep === "demo-select"
+                          ? "Select which experience you'd like to explore"
+                          : "Sign in by OTP verification"}
                   </p>
                 </div>
 
-                {/* Step 1: Mobile/Email Input */}
+                {/* Step 1: Login Options with two sections */}
                 {loginStep === "input" && (
                   <div className="space-y-6">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Mobile Number or Email
-                      </label>
-                      <input
-                        type="text"
-                        value={mobileOrEmail}
-                        onChange={(e) => setMobileOrEmail(e.target.value)}
-                        placeholder="Enter mobile number or email"
-                        className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl font-inter text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
-                      />
+                    <div className="pb-6 border-b border-gray-200">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Email
+                        </label>
+                        <input
+                          type="text"
+                          value={mobileOrEmail}
+                          onChange={(e) => setMobileOrEmail(e.target.value)}
+                          placeholder="Enter your email address"
+                          className="w-full px-4 py-3 border-2 border-gray-300 rounded-xl font-inter text-sm focus:ring-2 focus:ring-teal-500 focus:border-teal-500 transition-all"
+                        />
+                      </div>
+
+                      <button
+                        onClick={handleSendOtp}
+                        disabled={!mobileOrEmail || isSendingOtp}
+                        className={`w-full mt-4 px-6 py-3 text-white font-semibold rounded-xl text-sm transition-all hover:shadow-lg flex items-center justify-center ${
+                          mobileOrEmail && !isSendingOtp
+                            ? "bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-500 hover:to-teal-600"
+                            : "bg-gray-400 cursor-not-allowed"
+                        }`}
+                      >
+                        {isSendingOtp ? (
+                          <>
+                            <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent mr-2"></div>
+                            <span>Sending OTP...</span>
+                          </>
+                        ) : (
+                          "Continue"
+                        )}
+                      </button>
+
+                      {/* Doctor Signup Option */}
+                      <div className="mt-4">
+                        <p className="text-center text-gray-600 text-sm mb-3">
+                          Are you a healthcare professional?
+                        </p>
+                        <button
+                          onClick={() => {
+                            setIsDoctorSignup(true);
+                            setLoginStep("doctor-signup");
+                          }}
+                          className="w-full px-6 py-3 border-2 border-teal-600 text-teal-600 font-semibold rounded-xl text-sm transition-all hover:bg-teal-50"
+                        >
+                          <div className="flex items-center justify-center">
+                            <svg
+                              className="w-5 h-5 mr-2"
+                              xmlns="http://www.w3.org/2000/svg"
+                              width="24"
+                              height="24"
+                              viewBox="0 0 24 24"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                              strokeLinecap="round"
+                              strokeLinejoin="round"
+                            >
+                              <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+                              <polyline points="9 22 9 12 15 12 15 22"></polyline>
+                            </svg>
+                            Sign up as Doctor
+                          </div>
+                        </button>
+                      </div>
                     </div>
 
-                    <button
-                      onClick={handleSendOtp}
-                      disabled={!mobileOrEmail}
-                      className={`w-full px-6 py-3 text-white font-semibold rounded-xl text-sm transition-all hover:shadow-lg ${
-                        mobileOrEmail
-                          ? "bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-500 hover:to-teal-600"
-                          : "bg-gray-400 cursor-not-allowed"
-                      }`}
-                    >
-                      Continue
-                    </button>
-
-                    {/* Doctor Signup Option */}
-                    <div className="border-t pt-4">
-                      <p className="text-center text-gray-600 text-sm mb-3">
-                        Are you a healthcare professional?
+                    {/* Demo Access Section - with background color for visual separation */}
+                    <div className="pt-4 pb-4 px-5 mt-2 bg-teal-600 text-white rounded-xl">
+                      <h3 className="text-lg font-semibold mb-2">
+                        Demo Access
+                      </h3>
+                      <p className="text-sm text-white mb-4">
+                        Try out the platform without signing up.
                       </p>
+
                       <button
-                        onClick={() => {
-                          setIsDoctorSignup(true);
-                          setLoginStep("doctor-signup");
-                        }}
-                        className="w-full px-6 py-3 border-2 border-teal-600 text-teal-600 font-semibold rounded-xl text-sm transition-all hover:bg-teal-50"
+                        onClick={() => setLoginStep("demo-select")}
+                        className="w-full flex items-center justify-center p-4 bg-gray-800 border rounded-xl transition-all"
                       >
-                        👨‍⚕️ Sign up as Doctor
+                        <span className="font-medium">Continue as Guest</span>
                       </button>
                     </div>
                   </div>
@@ -350,14 +428,21 @@ export default function Home() {
 
                     <button
                       onClick={handleVerifyOtp}
-                      disabled={!otp || otp.length !== 6}
-                      className={`w-full px-6 py-3 text-white font-semibold rounded-xl text-sm transition-all hover:shadow-lg ${
-                        otp && otp.length === 6
+                      disabled={!otp || otp.length !== 6 || isVerifyingOtp}
+                      className={`w-full px-6 py-3 text-white font-semibold rounded-xl text-sm transition-all hover:shadow-lg flex items-center justify-center ${
+                        otp && otp.length === 6 && !isVerifyingOtp
                           ? "bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-500 hover:to-teal-600"
                           : "bg-gray-400 cursor-not-allowed"
                       }`}
                     >
-                      Verify & Continue
+                      {isVerifyingOtp ? (
+                        <>
+                          <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent mr-2"></div>
+                          <span>Verifying...</span>
+                        </>
+                      ) : (
+                        "Verify & Continue"
+                      )}
                     </button>
 
                     <div className="text-center">
@@ -365,7 +450,7 @@ export default function Home() {
                         onClick={() => setLoginStep("input")}
                         className="text-gray-500 hover:text-gray-700 text-sm transition-colors"
                       >
-                        ← Change Mobile/Email
+                        ← Change Email
                       </button>
                     </div>
                   </div>
@@ -403,22 +488,30 @@ export default function Home() {
                     </div>
 
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-                      <p className="text-blue-700 text-sm">
-                        💡 We'll fetch your profile details and send OTP to your
-                        registered mobile number
+                      <p className="text-blue-700 text-sm flex items-center">
+                        <Lightbulb className="mr-2" size={16} />
+                        We'll fetch your profile details and send OTP to your
+                        registered email address
                       </p>
                     </div>
 
                     <button
                       onClick={handleDoctorSignup}
-                      disabled={!hprId && !abhaId}
-                      className={`w-full px-6 py-3 text-white font-semibold rounded-xl text-sm transition-all hover:shadow-lg ${
-                        hprId || abhaId
+                      disabled={(!hprId && !abhaId) || isSendingOtp}
+                      className={`w-full px-6 py-3 text-white font-semibold rounded-xl text-sm transition-all hover:shadow-lg flex items-center justify-center ${
+                        (hprId || abhaId) && !isSendingOtp
                           ? "bg-gradient-to-r from-teal-600 to-teal-700 hover:from-teal-500 hover:to-teal-600"
                           : "bg-gray-400 cursor-not-allowed"
                       }`}
                     >
-                      Verify & Send OTP
+                      {isSendingOtp ? (
+                        <>
+                          <div className="animate-spin h-4 w-4 border-2 border-white rounded-full border-t-transparent mr-2"></div>
+                          <span>Verifying...</span>
+                        </>
+                      ) : (
+                        "Verify & Send OTP"
+                      )}
                     </button>
 
                     <div className="text-center">
@@ -438,6 +531,67 @@ export default function Home() {
                   </div>
                 )}
 
+                {/* Demo Selection Step */}
+                {loginStep === "demo-select" && (
+                  <div className="space-y-6 p-6">
+                    <h3 className="text-center text-xl font-bold mb-6">Demo</h3>
+
+                    <div className="grid grid-cols-1 gap-4">
+                      <button
+                        onClick={async () => {
+                          setIsDemoLoading(true);
+                          try {
+                            await signIn("demo-doctor", {
+                              callbackUrl: "/dashboard/doctor",
+                            });
+                          } finally {
+                            setIsDemoLoading(false);
+                          }
+                        }}
+                        disabled={isDemoLoading}
+                        className={`flex items-center justify-center p-4 bg-teal-700 hover:bg-gray-900 text-white rounded-xl transition-all font-medium ${isDemoLoading ? "opacity-70 cursor-not-allowed" : ""}`}
+                      >
+                        {isDemoLoading ? (
+                          <div className="animate-spin h-5 w-5 border-2 border-white rounded-full border-t-transparent mr-2"></div>
+                        ) : (
+                          <Stethoscope size={20} className="mr-2" />
+                        )}
+                        Continue as Doctor
+                      </button>
+
+                      <button
+                        onClick={async () => {
+                          setIsDemoLoading(true);
+                          try {
+                            await signIn("demo-patient", {
+                              callbackUrl: "/dashboard/patient",
+                            });
+                          } finally {
+                            setIsDemoLoading(false);
+                          }
+                        }}
+                        disabled={isDemoLoading}
+                        className={`flex items-center justify-center p-4 bg-teal-700 hover:bg-gray-900 text-white rounded-xl transition-all font-medium ${isDemoLoading ? "opacity-70 cursor-not-allowed" : ""}`}
+                      >
+                        {isDemoLoading ? (
+                          <div className="animate-spin h-5 w-5 border-2 border-white rounded-full border-t-transparent mr-2"></div>
+                        ) : (
+                          <User size={20} className="mr-2" />
+                        )}
+                        Continue as Patient
+                      </button>
+                    </div>
+
+                    <div className="text-center pt-2">
+                      <button
+                        onClick={() => setLoginStep("input")}
+                        className="text-gray-500 hover:text-gray-700 text-sm transition-colors"
+                      >
+                        ← Back to Login
+                      </button>
+                    </div>
+                  </div>
+                )}
                 {/* Back to Home */}
                 {loginStep === "input" && (
                   <div className="flex justify-center mt-6">
@@ -549,10 +703,10 @@ export default function Home() {
               style={{ borderTopColor: "rgb(16, 151, 135)" }}
             >
               <div
-                className="w-16 h-16 rounded-full mb-6 flex items-center justify-center text-white text-2xl font-bold"
+                className="w-16 h-16 rounded-full mb-6 flex items-center justify-center text-white font-bold"
                 style={{ backgroundColor: "rgb(16, 151, 135)" }}
               >
-                🌿
+                <Leaf size={32} />
               </div>
               <h3 className="text-xl font-montserrat font-bold mb-4">
                 Deep Detoxification
@@ -569,10 +723,10 @@ export default function Home() {
               style={{ borderTopColor: "rgb(16, 151, 135)" }}
             >
               <div
-                className="w-16 h-16 rounded-full mb-6 flex items-center justify-center text-white text-2xl font-bold"
+                className="w-16 h-16 rounded-full mb-6 flex items-center justify-center text-white font-bold"
                 style={{ backgroundColor: "rgb(16, 151, 135)" }}
               >
-                🧠
+                <Brain size={32} />
               </div>
               <h3 className="text-xl font-montserrat font-bold mb-4">
                 Mental Clarity
@@ -589,10 +743,10 @@ export default function Home() {
               style={{ borderTopColor: "rgb(16, 151, 135)" }}
             >
               <div
-                className="w-16 h-16 rounded-full mb-6 flex items-center justify-center text-white text-2xl font-bold"
+                className="w-16 h-16 rounded-full mb-6 flex items-center justify-center text-white font-bold"
                 style={{ backgroundColor: "rgb(16, 151, 135)" }}
               >
-                ⚡
+                <Zap size={32} />
               </div>
               <h3 className="text-xl font-montserrat font-bold mb-4">
                 Renewed Energy
@@ -609,10 +763,10 @@ export default function Home() {
               style={{ borderTopColor: "rgb(16, 151, 135)" }}
             >
               <div
-                className="w-16 h-16 rounded-full mb-6 flex items-center justify-center text-white text-2xl font-bold"
+                className="w-16 h-16 rounded-full mb-6 flex items-center justify-center text-white font-bold"
                 style={{ backgroundColor: "rgb(16, 151, 135)" }}
               >
-                🔄
+                <RefreshCw size={32} />
               </div>
               <h3 className="text-xl font-montserrat font-bold mb-4">
                 Immune Boost
@@ -657,10 +811,10 @@ export default function Home() {
             <div className="p-6 sm:p-8">
               <div className="flex items-center justify-center mb-6">
                 <div
-                  className="w-16 h-16 rounded-full flex items-center justify-center text-white text-2xl"
+                  className="w-16 h-16 rounded-full flex items-center justify-center text-white"
                   style={{ backgroundColor: "rgb(16, 151, 135)" }}
                 >
-                  🛡️
+                  <Shield size={32} />
                 </div>
               </div>
 

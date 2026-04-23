@@ -2,11 +2,11 @@ import { db } from "@/lib/db";
 import { doctors, users } from "@/lib/db/schema";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import { eq } from "drizzle-orm";
-import { NextAuthOptions } from "next-auth";
-import CredentialsProvider from "next-auth/providers/credentials";
+import NextAuth from "next-auth";
+import Credentials from "next-auth/providers/credentials";
 
-export const authOptions: NextAuthOptions = {
-  adapter: DrizzleAdapter(db) as any,
+export const { handlers, auth, signIn, signOut } = NextAuth({
+  adapter: DrizzleAdapter(db),
   session: {
     strategy: "jwt",
   },
@@ -14,14 +14,14 @@ export const authOptions: NextAuthOptions = {
     signIn: "/",
   },
   providers: [
-    CredentialsProvider({
+    Credentials({
       id: "otp",
       name: "OTP",
       credentials: {
         userId: { label: "User ID", type: "text" },
       },
       async authorize(credentials) {
-        if (!credentials?.userId) return null;
+        if (!credentials?.userId || typeof credentials.userId !== "string") return null;
 
         try {
           // Fetch user from database
@@ -39,12 +39,100 @@ export const authOptions: NextAuthOptions = {
             id: user.id.toString(),
             email: user.email,
             phone: user.phone,
-            role: user.role,
+            role: user.role as "patient" | "doctor",
+            ayursutraId: user.ayursutraId,
           };
         } catch (error) {
           console.error("Auth error:", error);
           return null;
         }
+      },
+    }),
+
+    // === Demo Doctor Provider ===
+    Credentials({
+      id: "demo-doctor",
+      name: "Demo Doctor",
+      credentials: {},
+      async authorize() {
+        // Check if demo doctor exists in your DB or create one dynamically
+        let user = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, "demodoctor@example.com"))
+          .limit(1);
+
+        if (user.length === 0) {
+          // Create the demo doctor
+          const [newUser] = await db
+            .insert(users)
+            .values({
+              name: "Demo Doctor",
+              email: "demodoctor@example.com",
+              role: "doctor",
+              ayursutraId: "demo-dr-123",
+            })
+            .returning();
+
+          return {
+            id: newUser.id.toString(),
+            email: newUser.email,
+            name: newUser.name,
+            role: newUser.role as "patient" | "doctor",
+            ayursutraId: newUser.ayursutraId,
+          };
+        }
+
+        return {
+          id: user[0].id.toString(),
+          email: user[0].email,
+          name: user[0].name,
+          role: user[0].role as "patient" | "doctor",
+          ayursutraId: user[0].ayursutraId,
+        };
+      },
+    }),
+
+    // === Demo Patient Provider ===
+    Credentials({
+      id: "demo-patient",
+      name: "Demo Patient",
+      credentials: {},
+      async authorize() {
+        let user = await db
+          .select()
+          .from(users)
+          .where(eq(users.email, "demopatient@example.com"))
+          .limit(1);
+
+        if (user.length === 0) {
+          // Create the demo patient
+          const [newUser] = await db
+            .insert(users)
+            .values({
+              name: "Demo Patient",
+              email: "demopatient@example.com",
+              role: "patient",
+              ayursutraId: "demo-pat-456",
+            })
+            .returning();
+
+          return {
+            id: newUser.id.toString(),
+            email: newUser.email,
+            name: newUser.name,
+            role: newUser.role as "patient" | "doctor",
+            ayursutraId: newUser.ayursutraId,
+          };
+        }
+
+        return {
+          id: user[0].id.toString(),
+          email: user[0].email,
+          name: user[0].name,
+          role: user[0].role as "patient" | "doctor",
+          ayursutraId: user[0].ayursutraId,
+        };
       },
     }),
   ],
@@ -55,14 +143,14 @@ export const authOptions: NextAuthOptions = {
         const dbUser = await db
           .select()
           .from(users)
-          .where(eq(users.id, parseInt(user.id)))
+          .where(eq(users.id, parseInt(user.id!)))
           .limit(1);
 
         if (dbUser.length > 0) {
-          token.role = dbUser[0].role;
+          token.role = dbUser[0].role as "patient" | "doctor";
           token.id = dbUser[0].id.toString();
           token.phone = dbUser[0].phone;
-          token.ayursutraId = dbUser[0].ayursutraId; // Add AyurSutra ID to token
+          token.ayursutraId = dbUser[0].ayursutraId;
 
           // If doctor, fetch doctor-specific info
           if (dbUser[0].role === "doctor" && dbUser[0].ayursutraId) {
@@ -85,17 +173,15 @@ export const authOptions: NextAuthOptions = {
         session.user.id = token.id as string;
         session.user.role = token.role as "patient" | "doctor";
         session.user.phone = token.phone as string;
-        session.user.ayursutraId = token.ayursutraId as string; // Add AyurSutra ID to session
+        session.user.ayursutraId = token.ayursutraId as string;
         session.user.doctorInfo = token.doctorInfo as any;
       }
       return session;
     },
   },
   events: {
-    async signIn({ user, isNewUser }) {
-      if (isNewUser) {
-        console.log(`New user signed in: ${user.email || user.phone}`);
-      }
+    async signIn({ user }) {
+      console.log(`User signed in: ${user.email || user.id}`);
     },
   },
-};
+});

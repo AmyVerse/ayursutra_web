@@ -39,7 +39,7 @@ export async function sendOTPEmail(
 ): Promise<boolean> {
   try {
     const result = await resend.emails.send({
-      from: "AyurSutra <noreply@ayursutra.amyverse.in>",
+      from: process.env.RESEND_FROM_EMAIL || "AyurSutra <ayursutra@amyverse.in>",
       to: email,
       subject: "Your AyurSutra Login OTP",
       html: `
