@@ -15,6 +15,7 @@ export const users = pgTable("users", {
   phone: text("phone"),
   name: text("name"),
   role: text("role").$type<"patient" | "doctor">().notNull().default("patient"),
+  age: integer("age"),
   emailVerified: timestamp("email_verified"),
   phoneVerified: timestamp("phone_verified"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
