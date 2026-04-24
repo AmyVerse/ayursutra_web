@@ -65,21 +65,26 @@ export async function POST(request: NextRequest) {
 
     const appointmentId = await generateAppointmentId();
 
-    // Get user IDs from AyurSutra IDs (for foreign keys)
-    // Note: You'll need to implement getUserByAyurSutraId if not already done
-    const patientId = 1; // Placeholder - get from ayursutraId
-    const doctorId = 2; // Placeholder - get from ayursutraId
-
-    // Get patient user information to include their name
-    let patientName = validatedData.patientName;
-
-    // If patient name wasn't provided in request, try to fetch from database
-    if (!patientName) {
-      const patientUser = await getUserByAyurSutraId(
-        validatedData.patientAyursutraId
+    // Get patient user information
+    const patientUser = await getUserByAyurSutraId(validatedData.patientAyursutraId);
+    if (!patientUser) {
+      return NextResponse.json(
+        { error: "Patient AyurSutra ID not found" },
+        { status: 404 }
       );
-      patientName = patientUser?.name || validatedData.patientAyursutraId;
     }
+    const patientId = patientUser.id;
+    const patientName = validatedData.patientName || patientUser.name || validatedData.patientAyursutraId;
+
+    // Get doctor user information
+    const doctorUser = await getUserByAyurSutraId(validatedData.doctorAyursutraId);
+    if (!doctorUser) {
+      return NextResponse.json(
+        { error: "Doctor AyurSutra ID not found" },
+        { status: 404 }
+      );
+    }
+    const doctorId = doctorUser.id;
 
     const appointment = await db
       .insert(appointments)
@@ -98,7 +103,7 @@ export async function POST(request: NextRequest) {
       .returning();
 
     // Create notification for doctor
-    await createNotification({
+    const notification = await createNotification({
       senderAyursutraId: validatedData.patientAyursutraId,
       receiverAyursutraId: validatedData.doctorAyursutraId,
       type: "appointment_request",
@@ -113,6 +118,37 @@ export async function POST(request: NextRequest) {
       },
       priority: "high",
     });
+
+    // Send real-time notification via Ably
+    try {
+      const ablyApiKey = process.env.ABLY_API_KEY;
+      if (ablyApiKey) {
+        // Dynamically import Ably to avoid heavy imports if not needed, or just require it
+        const Ably = require('ably');
+        const ably = new Ably.Rest(ablyApiKey);
+        const channelName = `notifications:${validatedData.doctorAyursutraId}`;
+        const channel = ably.channels.get(channelName);
+
+        const messageData = {
+          notificationId: notification.notificationId,
+          type: notification.type,
+          title: notification.title,
+          message: notification.message,
+          priority: notification.priority,
+          senderAyursutraId: notification.senderAyursutraId,
+          senderName: patientName,
+          receiverAyursutraId: notification.receiverAyursutraId,
+          receiverName: "Doctor", // Default placeholder
+          data: notification.data,
+          createdAt: notification.createdAt,
+        };
+
+        await channel.publish("new-notification", messageData);
+      }
+    } catch (ablyError) {
+      console.error("Ably appointment notification error:", ablyError);
+      // Don't fail the entire request if Ably fails
+    }
 
     return NextResponse.json({
       success: true,
