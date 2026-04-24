@@ -48,3 +48,34 @@ body {
   backdrop-filter: blur(100px);
   -webkit-backdrop-filter: blur(100px);
 }
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-in {
+  animation-duration: 0.3s;
+  animation-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  animation-fill-mode: both;
+}
+
+.slide-in-from-right {
+  animation-name: slideInRight;
+}
+
+.fade-in {
+  animation-name: fadeIn;
+}
+

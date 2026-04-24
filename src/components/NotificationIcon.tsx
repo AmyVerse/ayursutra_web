@@ -4,6 +4,7 @@ import * as Ably from "ably";
 import { Bell } from "lucide-react";
 import { useSession } from "next-auth/react";
 import { useEffect, useState } from "react";
+import { useToast } from "@/context/ToastContext";
 import NotificationModal from "./NotificationModal";
 
 interface Notification {
@@ -36,6 +37,7 @@ export default function NotificationIcon() {
   const [unreadCount, setUnreadCount] = useState(0);
   const [isConnected, setIsConnected] = useState(false);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
+  const { showToast } = useToast();
 
   useEffect(() => {
     if (!session?.user) return;
@@ -81,14 +83,22 @@ export default function NotificationIcon() {
     channel.subscribe("new-notification", (message) => {
       setUnreadCount((prev) => prev + 1);
 
+      const notificationData = message.data;
+
+      // Show toast notification
+      showToast({
+        title: notificationData.title,
+        message: notificationData.message,
+        type: notificationData.type === "appointment_request" ? "appointment" : "info",
+        data: notificationData,
+      });
+
       // Show browser notification if permitted
-      if (Notification.permission === "granted") {
-        const notificationData = message.data;
+      if (typeof Notification !== "undefined" && Notification.permission === "granted") {
         new Notification(notificationData.title, {
           body: notificationData.message,
           icon: "/ayur.svg",
           tag: notificationData.notificationId,
-          badge: "/ayur.svg",
         });
       }
 
@@ -97,12 +107,8 @@ export default function NotificationIcon() {
         try {
           const audio = new Audio("/notification-sound.mp3");
           audio.volume = 0.3;
-          audio.play().catch(() => {
-            // Ignore audio play errors
-          });
-        } catch (error) {
-          // Ignore audio errors
-        }
+          audio.play().catch(() => {});
+        } catch (error) {}
       }
     });
 
