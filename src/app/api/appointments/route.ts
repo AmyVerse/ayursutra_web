@@ -8,6 +8,7 @@ import { appointments } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import * as Ably from "ably";
 
 const createAppointmentSchema = z.object({
   patientAyursutraId: z.string().min(1),
@@ -123,8 +124,6 @@ export async function POST(request: NextRequest) {
     try {
       const ablyApiKey = process.env.ABLY_API_KEY;
       if (ablyApiKey) {
-        // Dynamically import Ably to avoid heavy imports if not needed, or just require it
-        const Ably = require('ably');
         const ably = new Ably.Rest(ablyApiKey);
         const channelName = `notifications:${validatedData.doctorAyursutraId}`;
         const channel = ably.channels.get(channelName);
@@ -143,10 +142,14 @@ export async function POST(request: NextRequest) {
           createdAt: notification.createdAt,
         };
 
+        console.log(`[ABLY] Publishing new-notification to channel ${channelName}`);
         await channel.publish("new-notification", messageData);
+        console.log(`[ABLY] Successfully published to ${channelName}`);
+      } else {
+        console.warn("[ABLY] ABLY_API_KEY is not defined in environment variables");
       }
     } catch (ablyError) {
-      console.error("Ably appointment notification error:", ablyError);
+      console.error("[ABLY] Appointment notification error:", ablyError);
       // Don't fail the entire request if Ably fails
     }
 

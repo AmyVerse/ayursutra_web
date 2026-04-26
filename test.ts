@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { getUserByAyurSutraId } from "./src/lib/ayursutra-id";
 import { db } from "./src/lib/db";
 import { appointments } from "./src/lib/db/schema";

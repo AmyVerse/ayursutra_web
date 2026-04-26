@@ -33,10 +33,10 @@ async function handleAblyAuth(request: NextRequest) {
 
     const tokenRequestData = await ably.auth.createTokenRequest({
       clientId: ayursutraId,
-      capability: {
+      capability: JSON.stringify({
         [`notifications:${ayursutraId}`]: ["subscribe"],
         [`appointments:${ayursutraId}`]: ["subscribe"],
-      },
+      }),
     });
 
     return NextResponse.json(tokenRequestData);

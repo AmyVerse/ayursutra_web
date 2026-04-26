@@ -32,6 +32,10 @@ interface Notification {
   updatedAt: string;
 }
 
+// Module-level singleton to prevent React Strict Mode multiple-instantiation crashes
+let ablyInstance: Ably.Realtime | null = null;
+let currentAyursutraId: string | null = null;
+
 export default function NotificationIcon() {
   const { data: session } = useSession();
   const [unreadCount, setUnreadCount] = useState(0);
@@ -48,42 +52,68 @@ export default function NotificationIcon() {
     // Fetch initial unread count
     fetchUnreadCount();
 
-    // Initialize Ably connection
-    let ably: Ably.Realtime | null = null;
-    try {
-      ably = new Ably.Realtime({
-        authUrl: `/api/ably/auth?ayursutraId=${userAyursutraId}`,
-        authMethod: "GET",
+    // Singleton pattern for Ably
+    if (!ablyInstance || currentAyursutraId !== userAyursutraId) {
+      if (ablyInstance) {
+        try { ablyInstance.close(); } catch (e) {}
+      }
+      
+      currentAyursutraId = userAyursutraId;
+      ablyInstance = new Ably.Realtime({
+        authCallback: async (tokenParams, callback) => {
+          try {
+            const response = await fetch(
+              `/api/ably/auth?ayursutraId=${userAyursutraId}`,
+              { 
+                method: "POST",
+                headers: { "Content-Type": "application/json" }
+              }
+            );
+            if (!response.ok) {
+              throw new Error(`Auth failed: ${response.statusText}`);
+            }
+            const tokenRequest = await response.json();
+            callback(null, tokenRequest);
+          } catch (error) {
+            console.error("Ably authCallback error:", error);
+            callback(String(error), null);
+          }
+        },
       });
-    } catch (error) {
-      console.error("Failed to initialize Ably connection:", error);
-      return;
     }
 
-    if (!ably) return;
+    const ably = ablyInstance;
 
     const channelName = `notifications:${userAyursutraId}`;
     const channel = ably.channels.get(channelName);
 
-    // Connection status
-    ably.connection.on("connected", () => {
+    // Track connection status
+    const onConnected = () => {
+      console.log("[ABLY] Connected successfully to Ably servers!");
       setIsConnected(true);
-    });
-
-    ably.connection.on("disconnected", () => {
+    };
+    const onDisconnected = () => {
+      console.log("[ABLY] Disconnected from Ably servers.");
       setIsConnected(false);
-    });
-
-    ably.connection.on("failed", (error) => {
-      setIsConnected(false);
+    };
+    const onFailed = (error: any) => {
       console.error("Ably connection failed:", error);
-    });
+      setIsConnected(false);
+    };
+
+    ably.connection.on("connected", onConnected);
+    ably.connection.on("disconnected", onDisconnected);
+    ably.connection.on("failed", onFailed);
+    
+    // Set initial state
+    setIsConnected(ably.connection.state === "connected");
 
     // Listen for new notifications
-    channel.subscribe("new-notification", (message) => {
+    const onNewNotification = (message: Ably.InboundMessage) => {
+      console.log("[ABLY] Received new-notification event!", message.data);
       setUnreadCount((prev) => prev + 1);
 
-      const notificationData = message.data;
+      const notificationData = message.data as any;
 
       // Show toast notification
       showToast({
@@ -94,7 +124,7 @@ export default function NotificationIcon() {
       });
 
       // Show browser notification if permitted
-      if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+      if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
         new Notification(notificationData.title, {
           body: notificationData.message,
           icon: "/ayur.svg",
@@ -103,34 +133,37 @@ export default function NotificationIcon() {
       }
 
       // Play notification sound for appointment requests
-      if (message.data.type === "appointment_request") {
+      if (notificationData.type === "appointment_request") {
         try {
           const audio = new Audio("/notification-sound.mp3");
           audio.volume = 0.3;
           audio.play().catch(() => {});
         } catch (error) {}
       }
-    });
+    };
+
+    channel.subscribe("new-notification", onNewNotification);
 
     // Listen for notification read updates
-    channel.subscribe("notification-read", (message) => {
+    const onNotificationRead = (message: Ably.InboundMessage) => {
       setUnreadCount((prev) => Math.max(0, prev - 1));
-    });
+    };
+    
+    channel.subscribe("notification-read", onNotificationRead);
 
     // Request notification permission
-    if (Notification.permission === "default") {
+    if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "default") {
       Notification.requestPermission();
     }
 
     return () => {
-      // Clean up subscriptions only - let Ably handle connection lifecycle
-      if (channel) {
-        try {
-          channel.unsubscribe();
-        } catch (error) {
-          // Silently handle cleanup errors
-        }
-      }
+      // Clean up specifically the listeners we just added!
+      channel.unsubscribe("new-notification", onNewNotification);
+      channel.unsubscribe("notification-read", onNotificationRead);
+      
+      ably.connection.off("connected", onConnected);
+      ably.connection.off("disconnected", onDisconnected);
+      ably.connection.off("failed", onFailed);
     };
   }, [session?.user]);
 
